@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Matrix Diagram</title>
+    <link type="text/css" rel="stylesheet" href="ex.css"/>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+    <script type="text/javascript" src="tag_graph.js"></script>
+    <script type="text/javascript" src="js/sm.js"></script>
+    <script type="text/javascript" src="js/soundmanager2-nodebug-jsmin.js"></script>
+    <script type="text/javascript" src="js/protovis.min.js"></script>
+    <style type="text/css">
+
+#fig {
+  width: 900px;
+  height: 900px;
+}
+
+#info {
+    height:20px;
+}
+
+    </style>
+  </head>
+  <body>
+  
+
+    <div id="search">
+        <input title="enter tag" type="text"  id="tag" 
+            onkeydown="if (event.keyCode == 13) newTag()" name="tag" value='heavy metal'/>
+        <input title="enter artist" type="text"  id="artist" 
+            onkeydown="if (event.keyCode == 13) newArtist()" name="artist" value='weezer'/>
+        <span id="overlap"> </span>
+        <span id="track"> </span>
+        <span id="tags"> </span>
+        <div id="info"> </div>
+        <div id="album-art" title="album art"> 
+            <img width=100px id="album-img" src="assets/AlbumBlank.png"/> 
+        </div>
+    </div>
+
+<div id="center"><div id="fig">
+</div></div>
+
+</body>
+
+
+<!--
+<script type="text/javascript+protovis">
+-->
+
+<script type="text/javascript">
+var server = 'http://localhost:7654/TagServer';
+var tag_plays = {}
+
+function newTag() {
+    var tag = $("#tag").val();
+    tag_plays = {}
+    fetchTagGraph(tag);
+    ga_track('newtag', tag);
+}
+
+function newArtist() {
+    var artist = $("#artist").val();
+    tag_plays = {}
+    fetchArtistGraph(artist);
+    ga_track('newartist', artist);
+}
+
+
+function fetchTagGraph(tag) {
+    info('Getting graph for ' + tag);
+    var url = server + "/tag_graph?callback=?";
+
+    $.getJSON(url, { 'tag': tag, 'max_size': 24, 'sort': 'alpha' }, function(data) {
+        if (checkResponse(data)) {
+            createMatrix(data.graph);
+        }
+    });
+}
+
+function fetchArtistGraph(artist) {
+    info('Getting artist graph for ' + artist);
+    var url = server + "/artist_graph?callback=?";
+
+    $.getJSON(url, { 'artist': artist, 'max_size': 24, 'sort': 'alpha' }, function(data) {
+        if (checkResponse(data)) {
+            createMatrix(data.graph);
+        }
+    });
+}
+
+function info(s) {
+    $("#info").text(s);
+}
+
+function error(s) {
+    info(s);
+}
+
+var tag_plays = {}
+
+function fetchTagOverlap(tag1, tag2) {
+    info('Finding overlap for ' + tag1 + " and " + tag2);
+    var url = server + "/top_tracks?callback=?";
+
+    if (tag1 in tag_plays && tag2 in tag_plays[tag1]) {
+        tag_plays[tag1][tag2] += 1;
+    } else {
+        tag_plays[tag1] = {}
+        tag_plays[tag1][tag2] = 0;
+    }
+    var start = tag_plays[tag1][tag2];
+
+    $.getJSON(url, { 'tag1': tag1, 'tag2' : tag2, 'start': start, 'count': 1, }, function(data) {
+        if (checkResponse(data)) {
+            showOverlap(data.tracks);
+        }
+    });
+}
+
+function isPlaying() {
+    return true;
+}
+
+function showOverlap(tracks) {
+    console.log(tracks);
+    if (tracks.length > 0) {
+        var track_score = tracks[0];
+        var t = track_score[0];
+        var tname = t.title + ' by ' + t.artist;
+        $("#track").text(tname);
+        if (isPlaying()) {
+            playTrack(t);
+        }
+    } else {
+        $("#track").text("");
+    }
+}
+
+function playTrack(track) {
+    info("Playing " + track.mp3);
+    audioPlay(track.mp3);
+    if (track.img.length > 0); {
+        $("#album-img").attr('src', track.img);
+    }
+}
+
+function nextTrack() {
+}
+
+
+
+function checkResponse(data) {
+    if (data.status == 'ok') {
+        info('');
+    } else {
+        info("can't do that: " + data.status);
+    }
+    return data.status == 'ok';
+}
+
+function setPlaying(playing) {
+}
+
+
+function audioReady() {
+    fetchTagGraph('heavy metal');
+}
+
+
+//var tag_graph = miserables;
+var color = pv.Colors.category19().by(function(d) {return d.group;});
+var cscale = pv.Scale.linear(0, .12,  .6, 1).range('#eee', '#9f9', 'orange', 'red');
+var dim = 800;
+
+function createMatrix(graph) {
+    var vis = new pv.Panel()
+        .canvas('fig')
+        .width(dim)
+        .height(dim)
+        .def('current_index', -1)
+        .top(130)
+        .left(130);
+
+    var layout = vis.add(pv.Layout.Matrix)
+        .nodes(graph.nodes)
+        .directed(true)
+        .links(graph.links);
+
+    layout.link.add(pv.Bar)
+        .fillStyle(function(l) {
+            if (l.sourceNode === l.targetNode) {
+                return cscale("#f8f8f8");
+            }
+            if (l.linkValue) {
+                return cscale(l.linkValue);
+            } else {
+                return cscale(0);
+            }
+        })
+        .antialias(false)
+        .lineWidth(1)
+        .event("click", function(l) { 
+                var percent = Math.round(l.linkValue * 100);
+                var t = ' ' + percent + '% of ' + l.sourceNode.nodeName + ' overlaps with ' + l.targetNode.nodeName;
+                $("#overlap").text(t);
+                fetchTagOverlap(l.sourceNode.nodeName, l.targetNode.nodeName);
+            }
+        );
+
+    layout.label.add(pv.Label)
+        .events('all')
+        .event("click", function(node) { fetchTagGraph(node.nodeName) })
+        .textStyle(color);
+    vis.render();
+}
+
+$(document).ready(function() {
+    setPlaying(false);
+    initSoundManagerPlayer();
+});
+
+
+
+// Google analytics tracker
+function ga_track(action, tag) {
+    //_gaq.push(['_trackEvent', 'tag', action, tag]);
+}
+
+
+</script>
+</html>

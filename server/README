@@ -1,0 +1,5 @@
+This server serves up  information used by the MSD Matrix Explorer
+
+To run this server you need to set the python path to include the util directory:
+
+export PYTHONPATH=../../../clients/util/
