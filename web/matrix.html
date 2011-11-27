@@ -59,7 +59,7 @@
             <div id="np_track"> </div>
             <div id="np_artist"> </div>
             <div id="album-art" title="album art"> 
-                <a id='artist-link' target="7d" href="">
+                <a id='artist-link' target="other" href="">
                 <img width=200px id="album-img" src="assets/Matrix Diagram.png"/> 
                 </a>
             </div>
@@ -71,7 +71,7 @@
 </div>
 
 <div id="center">
-<h2 id="matrix-title"> Matrix</h2>
+<h2 id="matrix-title"> </h2>
 <div id="overlap"> </div>
 <div id="fig">
 </div>
@@ -109,7 +109,7 @@ function newArtist() {
 }
 
 function setTitle(title) {
-    $("#matrix-title").text(title);
+    $("#matrix-title").html(title);
 }
 
 function fetchTagGraph(tag) {
@@ -118,13 +118,22 @@ function fetchTagGraph(tag) {
 
     $.getJSON(url, { 'tag': tag, 'max_size': 24, 'sort': 'relevance' }, function(data) {
         if (checkResponse(data)) {
-            setTitle("Overlap matrix for the " + tag + " neighborhood")
+            setTitle("Overlap matrix for the " + linkedTag(tag) + " neighborhood")
             createMatrix(data.graph);
         } else {
             error("Can't find " + tag);
         }
     });
     ga_track('newtag', tag);
+}
+
+function linkedTag(tag) {
+    var url = 'http://last.fm/tag/' + normalizeForUrl(tag);
+    return "<a class='linktag' target='other' href='" + url + "'>" + tag + "</a>";
+}
+
+function normalizeForUrl(tag) {
+    return tag.replace(/ /g, '+');
 }
 
 function fetchArtistGraph(artist) {
@@ -207,7 +216,7 @@ function showOverlap(tracks) {
         var t = track_score[0];
         var tname = t.title + ' by ' + t.artist;
         $("#np_track").text(t.title);
-        $("#np_artist").text(t.artist).click(function(e) { fetchArtistGraph(t.artist); } );
+        $("#np_artist").text(t.artist);
         showTags(t.tags);
         if (isPlaying()) {
             playTrack(t);
@@ -282,6 +291,7 @@ var cscale = pv.Scale.linear(-1, 0, .12,  .6, 1).range('#f8f8f8', '#eee', '#9f9'
 var dim = 800;
 
 function createMatrix(graph) {
+    $("#overlap").text("");
     var vis = new pv.Panel()
         .canvas('fig')
         .width(dim)
@@ -310,8 +320,9 @@ function createMatrix(graph) {
         .lineWidth(1)
         .event("click", function(l) { 
                 var percent = Math.round(l.linkValue * 100);
-                var t = ' ' + percent + '% of ' + l.sourceNode.nodeName + ' overlaps with ' + l.targetNode.nodeName;
-                $("#overlap").text(t);
+                var t = ' ' + percent + '% of ' + linkedTag(l.sourceNode.nodeName) 
+                    + ' overlaps with ' + linkedTag(l.targetNode.nodeName);
+                $("#overlap").html(t);
                 curNode = l;
                 nextTrack();
             }
@@ -340,7 +351,7 @@ $(document).ready(function() {
     initSoundManagerPlayer();
     helpMode(true);
     $("#title").click(function () { helpMode(true); } );
-
+    $("#np_artist").click(function(e) { fetchArtistGraph(e.target.textContent); } );
     $("#mute").click(function () {  togglePlaying(); } );
 });
 

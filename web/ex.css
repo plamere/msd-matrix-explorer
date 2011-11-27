@@ -42,6 +42,7 @@ body {
     left:250px;
 }
 
+
 #mute {
     position:relative;
     left:180px;
@@ -138,4 +139,9 @@ body {
 
 #fig text:hover {
     color:green;
+}
+
+.linktag {
+    color:DarkOliveGreen;
+    text-decoration:none;
 }
