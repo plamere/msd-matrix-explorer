@@ -4,42 +4,82 @@
     <title>Matrix Diagram</title>
     <link type="text/css" rel="stylesheet" href="ex.css"/>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
-    <script type="text/javascript" src="tag_graph.js"></script>
     <script type="text/javascript" src="js/sm.js"></script>
     <script type="text/javascript" src="js/soundmanager2-nodebug-jsmin.js"></script>
     <script type="text/javascript" src="js/protovis.min.js"></script>
     <style type="text/css">
 
-#fig {
-  width: 900px;
-  height: 900px;
-}
 
-#info {
-    height:20px;
-}
 
     </style>
+
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-3675615-29']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
   </head>
   <body>
   
 
+<div id="left">
     <div id="search">
+        <h2 id='title'> Music Matrix</h2>
+        Enter a tag:
         <input title="enter tag" type="text"  id="tag" 
             onkeydown="if (event.keyCode == 13) newTag()" name="tag" value='heavy metal'/>
+        <br>Or an artist:
         <input title="enter artist" type="text"  id="artist" 
             onkeydown="if (event.keyCode == 13) newArtist()" name="artist" value='weezer'/>
-        <span id="overlap"> </span>
-        <span id="track"> </span>
-        <span id="tags"> </span>
         <div id="info"> </div>
-        <div id="album-art" title="album art"> 
-            <img width=100px id="album-img" src="assets/AlbumBlank.png"/> 
+        <div id="help">
+            <b>Welcome to the Music Matrix!</b>
+
+            <p>
+            The Music Matrix shows the overlap between different music tags.   Hotter colors indicate more overlap.
+            <p>
+            Enter a tag (a genre, mood or style) and the Music Matrix will show you 'overlap matrix' for 
+            that tag's neighborhood. Click on any cell in the matrix to hear songs that match those two styles.
+            <p>
+            Interested in learning more about a particular genre? Enter the genre name and see the genre neighborhood
+            and start exploring the genre neighborhood.
+            <p>
+            Enter an artist's name to see the overlap matrix for that artist's top tags.  
+        </div>
+
+        <div id="standard">
+            <div id="np_track"> </div>
+            <div id="np_artist"> </div>
+            <div id="album-art" title="album art"> 
+                <img width=200px id="album-img" src="assets/Matrix Diagram.png"/> 
+            </div>
+            <img id="mute" src="assets/Sound_Button.png">
+            <h4 id='track-header'> Top Tags for this track </h4>
+            <ul id="tags"> </ul>
         </div>
     </div>
+</div>
 
-<div id="center"><div id="fig">
-</div></div>
+<div id="center">
+<h2 id="matrix-title"> Matrix</h2>
+<div id="overlap"> </div>
+<div id="fig">
+</div>
+<div id="footer">
+    Powered by <a href="http://labrosa.ee.columbia.edu/millionsong/">The Million Song Data Set</a>, <a
+    href="http://the.echonest.com">The Echo Nest</a>, <a href="http://last.fm">Last.fm</a>
+    and <a href="http://7digital.com">7Digital</a>. More info at <a href="http://musicmachinery.com">Music Machinery</a>
+</div>
+</div>
+
 
 </body>
 
@@ -51,42 +91,52 @@
 <script type="text/javascript">
 var server = 'http://localhost:7654/TagServer';
 var tag_plays = {}
+var curNode = null;
 
 function newTag() {
     var tag = $("#tag").val();
     tag_plays = {}
     fetchTagGraph(tag);
-    ga_track('newtag', tag);
 }
 
 function newArtist() {
     var artist = $("#artist").val();
     tag_plays = {}
     fetchArtistGraph(artist);
-    ga_track('newartist', artist);
 }
 
+function setTitle(title) {
+    $("#matrix-title").text(title);
+}
 
 function fetchTagGraph(tag) {
     info('Getting graph for ' + tag);
     var url = server + "/tag_graph?callback=?";
 
-    $.getJSON(url, { 'tag': tag, 'max_size': 24, 'sort': 'alpha' }, function(data) {
+    $.getJSON(url, { 'tag': tag, 'max_size': 24, 'sort': 'relevance' }, function(data) {
         if (checkResponse(data)) {
+            setTitle("Overlap matrix for the " + tag + " neighborhood")
             createMatrix(data.graph);
+        } else {
+            error("Can't find " + tag);
         }
     });
+    ga_track('newtag', tag);
 }
 
 function fetchArtistGraph(artist) {
-    info('Getting artist graph for ' + artist);
+    info('Getting matrix for ' + artist);
     var url = server + "/artist_graph?callback=?";
 
     $.getJSON(url, { 'artist': artist, 'max_size': 24, 'sort': 'alpha' }, function(data) {
         if (checkResponse(data)) {
+            setTitle("Overlap matrix for top tags for " + artist)
             createMatrix(data.graph);
+        } else {
+            error("Can't find " + artist);
         }
     });
+    ga_track('newartist', artist);
 }
 
 function info(s) {
@@ -100,7 +150,8 @@ function error(s) {
 var tag_plays = {}
 
 function fetchTagOverlap(tag1, tag2) {
-    info('Finding overlap for ' + tag1 + " and " + tag2);
+    info('Finding overlapping tracks');
+    helpMode(false);
     var url = server + "/top_tracks?callback=?";
 
     if (tag1 in tag_plays && tag2 in tag_plays[tag1]) {
@@ -114,21 +165,47 @@ function fetchTagOverlap(tag1, tag2) {
     $.getJSON(url, { 'tag1': tag1, 'tag2' : tag2, 'start': start, 'count': 1, }, function(data) {
         if (checkResponse(data)) {
             showOverlap(data.tracks);
+        } else {
+            error("No overlap for " + tag1 + " and " + tags2);
         }
     });
+    ga_track('tagoverlap', tag1 + "/" + tag2);
 }
 
+
+
+
+var playing = true;
+
 function isPlaying() {
-    return true;
+    return playing;
+}
+
+function togglePlaying() {
+    playing = !playing;
+    if (playing) {
+        audioResume();
+    } else {
+        audioPause();
+    }
+}
+
+function setPlaying(playing) {
+    if (playing) {
+        $("#mute").attr('src', 'assets/Sound_Button.png');
+    } else {
+        $("#mute").attr('src', 'assets/Mute_Button.png');
+    }
 }
 
 function showOverlap(tracks) {
-    console.log(tracks);
     if (tracks.length > 0) {
         var track_score = tracks[0];
         var t = track_score[0];
         var tname = t.title + ' by ' + t.artist;
-        $("#track").text(tname);
+        $("#np_track").text(t.title);
+        $("#np_artist").text(t.artist).click(function(e) { fetchArtistGraph(t.artist); } );
+        showTags(t.tags);
         if (isPlaying()) {
             playTrack(t);
         }
@@ -137,8 +214,24 @@ function showOverlap(tracks) {
     }
 }
 
+
+function showTags(tags) {
+    var maxTags = 25;
+
+    $("#track-header").show();
+    $("#tags").empty();
+    for (i = 0; i < tags.length; i++) {
+        if (i > maxTags) {
+            break;
+        }
+        var tag = $("<li class='tag'>");
+        tag.text(tags[i][0]);
+        tag.click( function(e) { fetchTagGraph(e.target.textContent); });
+        $("#tags").append(tag);
+    }
+}
+
 function playTrack(track) {
-    info("Playing " + track.mp3);
     audioPlay(track.mp3);
     if (track.img.length > 0); {
         $("#album-img").attr('src', track.img);
@@ -146,6 +239,9 @@ function playTrack(track) {
 }
 
 function nextTrack() {
+    if (curNode) {
+        fetchTagOverlap(curNode.sourceNode.nodeName, curNode.targetNode.nodeName);
+    }
 }
 
 
@@ -154,13 +250,10 @@ function checkResponse(data) {
     if (data.status == 'ok') {
         info('');
     } else {
-        info("can't do that: " + data.status);
     }
     return data.status == 'ok';
 }
 
-function setPlaying(playing) {
-}
 
 
 function audioReady() {
@@ -170,7 +263,7 @@ function audioReady() {
 
 //var tag_graph = miserables;
 var color = pv.Colors.category19().by(function(d) {return d.group;});
-var cscale = pv.Scale.linear(0, .12,  .6, 1).range('#eee', '#9f9', 'orange', 'red');
+var cscale = pv.Scale.linear(-1, 0, .12,  .6, 1).range('#f8f8f8', '#eee', '#9f9', 'orange', 'red');
 var dim = 800;
 
 function createMatrix(graph) {
@@ -179,7 +272,7 @@ function createMatrix(graph) {
         .width(dim)
         .height(dim)
         .def('current_index', -1)
-        .top(130)
+        .top(80)
         .left(130);
 
     var layout = vis.add(pv.Layout.Matrix)
@@ -190,7 +283,7 @@ function createMatrix(graph) {
     layout.link.add(pv.Bar)
         .fillStyle(function(l) {
             if (l.sourceNode === l.targetNode) {
-                return cscale("#f8f8f8");
+                return cscale(-1);
             }
             if (l.linkValue) {
                 return cscale(l.linkValue);
@@ -204,27 +297,43 @@ function createMatrix(graph) {
                 var percent = Math.round(l.linkValue * 100);
                 var t = ' ' + percent + '% of ' + l.sourceNode.nodeName + ' overlaps with ' + l.targetNode.nodeName;
                 $("#overlap").text(t);
-                fetchTagOverlap(l.sourceNode.nodeName, l.targetNode.nodeName);
+                curNode = l;
+                nextTrack();
             }
         );
 
     layout.label.add(pv.Label)
         .events('all')
         .event("click", function(node) { fetchTagGraph(node.nodeName) })
-        .textStyle(color);
+        .font("12px sans-serif")
+        .textStyle("#000000");
     vis.render();
+}
+
+function helpMode(enabled) {
+    if (enabled) {
+        $("#standard").hide();
+        $("#help").show();
+    } else {
+        $("#standard").show();
+        $("#help").hide();
+    }
 }
 
 $(document).ready(function() {
     setPlaying(false);
     initSoundManagerPlayer();
+    helpMode(true);
+    $("#title").click(function () { helpMode(true); } );
+
+    $("#mute").click(function () {  togglePlaying(); } );
 });
 
 
 
 // Google analytics tracker
 function ga_track(action, tag) {
-    //_gaq.push(['_trackEvent', 'tag', action, tag]);
+    _gaq.push(['_trackEvent', 'tag', action, tag]);
 }
 
 

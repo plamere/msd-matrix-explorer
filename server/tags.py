@@ -2,15 +2,14 @@ import sys
 import os
 import re
 import math
-import ds
 import track as track_info
 import simplejson as json
 import collections
 
 
 
-tag_file = '/lab/mir/data/msd/track_tags.dat'
 tag_file = '../../track_tags_tiny.dat'
+tag_file = '/lab/mir/data/msd/track_tags.dat'
 
 
 valid_tags = set()
@@ -225,16 +224,23 @@ def get_confusion_matrix():
 
 def load():
     global store, matrix, tag_tracks
-    #store = ds.DataStore('cache.db')
     matrix, tag_tracks = get_confusion_matrix()
   
-def sort_keys(keys, matrix, sort):
+def sort_keys(tag, keys, matrix, sort):
     if sort == 'alpha':
         return sorted(keys)
+    elif sort == 'alphaprime':
+        keys.remove(tag)
+        skeys = sorted(keys)
+        skeys.insert(0, tag)
+        return skeys
     elif sort == 'cluster':
         return find_best_key_order(matrix)
-
-    # TODO sort by relevance and popularity
+    elif sort == 'relevance':
+        row = matrix[tag]
+        list = [ (c, t) for t,c in row.items()]
+        list.sort(reverse=True)
+        return [ t for c,t in list]
     return keys
 
 def build_tag_graph(tag, max_size, sort):
@@ -243,7 +249,7 @@ def build_tag_graph(tag, max_size, sort):
     if tag in matrix:
         keys = find_overlapping_keys(tag, matrix, max=max_size)
         lmatrix = subset_matrix(keys, matrix)
-        keys = sort_keys(keys, lmatrix, sort)
+        keys = sort_keys(tag, keys, lmatrix, sort)
         graph = matrix_to_dict(lmatrix, keys)
     return graph
 
@@ -259,7 +265,7 @@ def build_artist_graph(artist, max_size, sort):
         for v,k in taglist:
             keys.append(k)
         lmatrix = subset_matrix(keys, matrix)
-        keys = sort_keys(keys, lmatrix, sort)
+        #keys = sort_keys(None, keys, lmatrix, sort)
         graph = matrix_to_dict(lmatrix, keys)
     return graph
 
@@ -302,7 +308,7 @@ def find_top_tracks(tag1, tag2, start, count):
         results.sort(key=lambda tc: tc[1], reverse=True)
 
     results = get_top_results_with_tracks(results, start + count)
-    if start > len(results):
+    if len(results) > 0 and start > len(results):
         start = start % len(results)
     return results[start:start + count]
             

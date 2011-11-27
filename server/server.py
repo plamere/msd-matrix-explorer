@@ -3,13 +3,6 @@ import cherrypy
 import ConfigParser
 import urllib2
 import simplejson as json
-import webtools
-import time
-
-
-import ds
-import markup
-
 import tags
 
 class TagServer(object):
@@ -100,6 +93,5 @@ if __name__ == '__main__':
                                 'log.error_file': 'site.log',
                                 'log.screen': True})
 
-    conf = webtools.get_export_map_for_directory("static")
-    cherrypy.quickstart(TagServer(config), '/TagServer', config=conf)
+    cherrypy.quickstart(TagServer(config), '/TagServer')
 

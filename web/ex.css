@@ -3,14 +3,137 @@ body {
   height: 100%;
   width: 100%;
   font: 14px/134% Helvetica Neue, sans-serif;
+     background-color:#eee;
 }
 
-#center {
-  display: table-cell;
-  vertical-align: middle;
-}
 
 #fig {
+  width: 900px;
+  height: 900px;
   position: relative;
   margin: auto;
+}
+
+#left {
+    left:0;
+    width:260px;
+    /*color:#8ac290;
+    */
+     background-color:#eee;
+
+    text-align: left;
+    overflow: auto;
+    height:960px;
+
+    padding-left:20px;
+    margin-left:10px;
+    padding-right:10px;
+}
+
+#what {
+    position:absolute;
+    right:5px;
+}
+
+#center{
+    top:0px;
+    position:absolute;
+    width:900px;
+    left:250px;
+}
+
+#mute {
+    position:relative;
+    left:180px;
+}
+
+
+#np_artist {
+    font-weight:bold;
+    height:24px;
+}
+
+#np_track {
+    font-weight:bold;
+    height:24px;
+}
+
+#album-art{
+    margin-top:20px;
+
+}
+
+#info {
+    text-align:left;
+    margin-left:auto;
+    margin-right:auto;
+    margin-top:20px;
+    height:32px;
+}
+
+#overlap {
+    text-align:center;
+    margin-left:auto;
+    margin-right:auto;
+    height:24px;
+}
+
+#matrix-title {
+    text-align:center;
+    margin-left:auto;
+    margin-right:auto;
+}
+
+
+#footer {
+    color:#999;
+    margin-top:20px;
+    margin-left:10px;
+    padding-right:20px;
+    padding-top:4px;
+    width: 970px;
+    height: 32px;
+    font-size: .8em;
+    text-align:center;
+}
+
+#tags li { 
+    list-style-type: none; 
+    margin-left:-20px;
+    padding-left:0px;
+    text-transform : capitalize;
+}
+
+#tags li:hover {
+    color:green;
+    cursor:pointer;
+}
+
+#np_artist:hover  { 
+    color:green;
+    cursor:pointer;
+}
+
+#tags li:hover {
+    color:green;
+    cursor:pointer;
+}
+
+#fig g text {
+    cursor:pointer;
+}
+
+#title  {
+    cursor:pointer;
+}
+
+#help {
+    margin-right:20px;
+    padding:10px;
+    background: #dddddd;
+}
+
+
+#fig text:hover {
+    color:green;
 }
