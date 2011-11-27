@@ -17,14 +17,10 @@ body {
 #left {
     left:0;
     width:260px;
-    /*color:#8ac290;
-    */
      background-color:#eee;
 
     text-align: left;
     overflow: auto;
-    height:960px;
-
     padding-left:20px;
     margin-left:10px;
     padding-right:10px;

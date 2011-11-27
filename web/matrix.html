@@ -114,7 +114,9 @@ function setTitle(title) {
 
 function fetchTagGraph(tag) {
     info('Getting graph for ' + tag);
+    addToHash('tag='+tag);
     var url = server + "/tag_graph?callback=?";
+
 
     $.getJSON(url, { 'tag': tag, 'max_size': 24, 'sort': 'relevance' }, function(data) {
         if (checkResponse(data)) {
@@ -132,11 +134,16 @@ function linkedTag(tag) {
     return "<a class='linktag' target='other' href='" + url + "'>" + tag + "</a>";
 }
 
-function normalizeForUrl(tag) {
-    return tag.replace(/ /g, '+');
+function addToHash(s) {
+    window.location.hash = normalizeForUrl(s);
+}
+
+function normalizeForUrl(s) {
+    return encodeURI(s);
 }
 
 function fetchArtistGraph(artist) {
+    addToHash('artist='+artist);
     info('Getting matrix for ' + artist);
     var url = server + "/artist_graph?callback=?";
 
@@ -281,7 +288,23 @@ function checkResponse(data) {
 
 
 function audioReady() {
-    fetchTagGraph('heavy metal');
+    var hash = window.location.hash;
+    if (hash) {
+        console.log('hash is ' + hash);
+        hash=decodeURI(hash);
+        console.log('decoded hash is ' + hash);
+        if (hash.indexOf("#artist=") === 0) {
+            var artist = hash.substring(8);
+            $("#artist").val(artist);
+            fetchArtistGraph(artist);
+        } else if (hash.indexOf("#tag=") === 0) {
+            var tag = hash.substring(5);
+            $("#tag").val(tag);
+            fetchTagGraph(tag);
+        }
+    } else {
+        fetchTagGraph('heavy metal');
+    }
 }
 
 
@@ -318,11 +341,14 @@ function createMatrix(graph) {
         })
         .antialias(false)
         .lineWidth(1)
-        .event("click", function(l) { 
+        .event("mouseover", function(l) { 
                 var percent = Math.round(l.linkValue * 100);
                 var t = ' ' + percent + '% of ' + linkedTag(l.sourceNode.nodeName) 
                     + ' overlaps with ' + linkedTag(l.targetNode.nodeName);
                 $("#overlap").html(t);
+            }
+        )
+        .event("click", function(l) { 
                 curNode = l;
                 nextTrack();
             }
