@@ -59,7 +59,9 @@
             <div id="np_track"> </div>
             <div id="np_artist"> </div>
             <div id="album-art" title="album art"> 
+                <a id='artist-link' target="7d" href="">
                 <img width=200px id="album-img" src="assets/Matrix Diagram.png"/> 
+                </a>
             </div>
             <img id="mute" src="assets/Sound_Button.png">
             <h4 id='track-header'> Top Tags for this track </h4>
@@ -90,6 +92,7 @@
 
 <script type="text/javascript">
 var server = 'http://localhost:7654/TagServer';
+var server = 'http://labs.echonest.com/TagServer';
 var tag_plays = {}
 var curNode = null;
 
@@ -233,9 +236,21 @@ function showTags(tags) {
 
 function playTrack(track) {
     audioPlay(track.mp3);
+    set7dLink(track);
     if (track.img.length > 0); {
         $("#album-img").attr('src', track.img);
     }
+}
+
+function set7dLink(track) {
+    var artist = track.artist;
+    //artist = artist.toLowerCase().replace(/\W+/g, ' ');
+    artist = artist.toLowerCase().replace(/[\.,\/#!$%\^&\*;:{}=\_`~()]/g, ' ');
+    artist = artist.trim();
+    artist = artist.replace(/ /g, '-');
+
+    var url = 'http://www.7digital.com/artists/' + artist;
+    $("#artist-link").attr('href', url);
 }
 
 function nextTrack() {
